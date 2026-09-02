@@ -1,0 +1,29 @@
+{
+  "name": "termrent",
+  "version": "1.0.0",
+  "description": "Bidirectional, cross-device, zero-config encrypted file exchange CLI",
+  "type": "module",
+  "keywords": [
+    "file-transfer",
+    "encrypted",
+    "websocket",
+    "cli",
+    "zero-config",
+    "aes-gcm",
+    "e2e-encryption"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "bonjour-service": "^1.3.0",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "files": [
+    "lib/",
+    "README.md"
+  ]
+}
