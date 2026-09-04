@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "Bidirectional, cross-device, zero-config encrypted file exchange CLI",
   "type": "module",
+  "bin": {
+    "termrent": "./bin/termrent.js"
+  },
+  "main": "lib/server.js",
+  "scripts": {
+    "start": "node bin/termrent.js",
+    "dev": "node bin/termrent.js --port 3000"
+  },
   "keywords": [
     "file-transfer",
     "encrypted",
@@ -23,7 +31,9 @@
     "node": ">=20.19.0"
   },
   "files": [
+    "bin/",
     "lib/",
+    "public/",
     "README.md"
   ]
 }
