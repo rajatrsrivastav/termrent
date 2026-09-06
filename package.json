@@ -9,7 +9,12 @@
   "main": "lib/server.js",
   "scripts": {
     "start": "node bin/termrent.js",
-    "dev": "node bin/termrent.js --port 3000"
+    "dev": "node bin/termrent.js --port 3000",
+    "lint": "eslint .",
+    "build": "node scripts/check.js",
+    "test": "node --test test/*.test.js",
+    "check": "npm run lint && npm run build && npm test && npm run test:e2e",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "file-transfer",
@@ -35,5 +40,11 @@
     "lib/",
     "public/",
     "README.md"
-  ]
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0"
+  }
 }

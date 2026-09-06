@@ -1,0 +1,1 @@
+export default { testDir: './test/e2e', timeout: 30000, workers: 1, projects: ['chromium', 'firefox', 'webkit'].map(browserName => ({ name: browserName, use: { browserName } })), use: { headless: true, acceptDownloads: true } };
