@@ -73,8 +73,8 @@
    *  KEY EXTRACTION & IMPORT
    *
    *  The AES key is in the URL fragment: #key=<base64url>
-   *  After importing into WebCrypto, we wipe the fragment from the URL bar
-   *  so it won't appear in browser history, referrer headers, or screen shares.
+   *  After importing into WebCrypto (or our offline fallback), we wipe the fragment
+   *  from the URL bar so it won't appear in browser history, referrer headers, or screen shares.
    * ══════════════════════════════════════════════════════════════════════════ */
   let cryptoKey = null;
   let nobleGcm = null;
