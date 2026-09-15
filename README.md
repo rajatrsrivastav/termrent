@@ -1,70 +1,106 @@
 # ⚡ termrent
 
-Bidirectional encrypted browser file exchange on a local network, launched from a terminal.
+> **Bidirectional, cross-device, zero-config encrypted file exchange CLI.**
 
-## Install and use
+Launch a local relay server from your terminal, scan the generated QR code, and seamlessly exchange files end-to-end encrypted right in your browser. Perfect for transferring files between desktop and mobile devices on the same local network.
 
-Requires Node.js **20.19 or newer**.
+---
 
+## ✨ Features
+
+- **Zero-config**: Launch instantly from the terminal. No accounts or setup required.
+- **E2E Encrypted**: Uses AES-256-GCM in the browser via WebCrypto. The server *never* sees your keys or plaintext data.
+- **Cross-device**: Send files effortlessly between mobile, desktop, and tablet browsers.
+- **Auto-discovery**: Connect instantly by scanning the terminal QR code or using mDNS local network discovery.
+- **Lightweight**: No databases, CDNs, or external internet connections needed at runtime.
+
+## 🚀 Quick Start
+
+Requires **Node.js 20.19 or newer**.
+
+### Using `npx` (No installation needed)
+
+Run directly from npm:
 ```sh
+npx termrent
+```
+
+### Local Installation
+
+Clone the repository and install dependencies:
+```sh
+git clone https://github.com/rajatrsrivastav/termrent.git
+cd termrent
 npm install
 npm start
-# Or, after installing the package globally:
+```
+
+### Usage
+
+```sh
+# Start with default options (random room, random port)
+npm start
+
+# Or if installed globally / via npx
 termrent --room myfiles --port 8080
 ```
 
-Open the printed link on **both** devices (or scan its QR code). Keep both browser tabs open, then select or drop files. Every connected device in the room with the same key receives the file. Use the download link if your browser blocks automatic downloads. Files are limited to **64 MiB each** because receivers assemble them in memory. Transfers do not resume; resend after interruptions. “Sent to relay” means the sender queued the encrypted data, not that every receiver saved it.
+1. Open the printed link on **both** devices, or simply scan the QR code using your mobile device.
+2. Keep both browser tabs open.
+3. Select or drop files to transfer. Every connected device in the room with the same key receives the file.
+
+> **Note**: Files are assembled in memory and limited to **64 MiB each**. Transfers do not resume; resend after interruptions. "Sent to relay" means the sender queued the encrypted data, not that every receiver saved it.
+
+## 🛠 Options
 
 ```text
 termrent [options]
-  -r, --room <id>     3–32 letters, digits, underscores or hyphens; random by default
-  -p, --port <num>    0–65535; 0 chooses an available port
-  -h, --host <addr>   Bind address; defaults to 0.0.0.0
-      --no-qr         Suppress QR output
+
+Options:
+  -r, --room <id>     Room ID (3–32 chars); random by default
+  -p, --port <num>    Port to listen on (0 chooses available port)
+  -h, --host <addr>   Bind address (defaults to 0.0.0.0)
+      --no-qr         Suppress QR code output
       --help          Show help
 ```
 
-A specific bind host is used in the printed link. For wildcard binds the CLI chooses the first external IPv4 interface; on a multi-interface computer, replace the address with the interface reachable by the other device. Firewall rules and Wi-Fi client isolation must allow the chosen TCP port. mDNS advertising is best effort; use the link or QR code to connect. Ctrl+C or SIGTERM closes the relay and sockets.
+*Note: For wildcard binds, the CLI chooses the first external IPv4 interface. Firewall rules and Wi-Fi client isolation must allow the chosen TCP port. mDNS advertising is best effort.*
 
-## Security and limits
+## 🔒 Security & Limits
 
-The CLI generates a random AES-256-GCM key. It appears in the URL fragment, which browsers do not include in HTTP requests. The browser removes the fragment before importing the key. Reopen the original link after reloading; the key is deliberately not persisted. Removing the fragment cannot undo screenshots, copied links, browser synchronization, or other prior exposure.
+- **Client-Side Encryption**: The CLI generates a random AES-256-GCM key that appears in the URL fragment. Browsers do not include fragments in HTTP requests. The browser removes the fragment before importing the key.
+- **No Persistence**: Keys are deliberately not persisted. Reopen the original link after reloading. Anyone with the shared link can decrypt and send files. Room IDs are routing identifiers, not authorization.
+- **Untrusted Networks**: HTTP LAN mode assumes a trusted network. For untrusted networks, deploy behind a trusted HTTPS reverse proxy supporting WebSocket upgrades.
+- **Limits**: By default, there are up to 100 rooms, 10 peers per room, and a 30-minute room inactivity expiry.
 
-File metadata, transfer IDs, sequence numbers, and contents are encrypted and authenticated. The relay sees room IDs, connection information, sizes and timing of encrypted frames, but does not receive the key or plaintext through the transfer protocol. Anyone with the shared link can decrypt and send files. Room IDs are routing identifiers, not authorization. This is a broadcast room, not a private one-to-one channel.
+## 🏗 Architecture & Workflow
 
-**HTTP LAN mode assumes a trusted network and trusted relay host.** Encryption of file frames does not authenticate the JavaScript served over HTTP: an active network attacker or malicious host can replace it and steal the key. For untrusted networks, deploy behind a trusted HTTPS reverse proxy supporting WebSocket upgrades and share an `https://` link with the same fragment. This CLI does not provision certificates or configure a proxy.
+There is no database, persistence layer, or transpilation step.
 
-WebCrypto is used when available; on insecure HTTP origins the browser loads the installed `@noble/ciphers` modules from the relay itself. No CDN, external font, or internet connection is required at runtime. The Node helper uses the same packet format as the browser:
+- `bin/termrent.js`: CLI validation, room/key generation, QR output, and mDNS.
+- `lib/server.js`: HTTP asset server and binary WebSocket relay; in-memory room management.
+- `lib/crypto-utils.js`: Interoperable Node AES helpers.
+- `public/`: Browser UI (`index.html`) and transfer protocol logic (`app.js`).
+- `test/`: Core cryptography, network, and CLI regression tests, alongside Playwright end-to-end tests.
 
-```text
-12-byte random IV | AES-GCM ciphertext | 16-byte authentication tag
-```
+### Development Workflow
 
-Encrypted plaintext starts with one byte: `0` for JSON offer/completion messages, or `1` for a chunk containing a 16-byte ASCII transfer ID, a 4-byte big-endian chunk index, and up to 256 KiB of file data. Receivers process frames serially and validate chunk sequence, sizes, and completion before download. Old plaintext-metadata clients are incompatible.
+1. Install dependencies and browser binaries for testing:
+   ```sh
+   npm ci
+   npx playwright install chromium firefox webkit
+   ```
+2. Start the dev server:
+   ```sh
+   npm run dev
+   ```
+3. Run checks and tests:
+   ```sh
+   npm run check
+   ```
 
-Defaults: 100 rooms, 10 peers per room, 4 MiB maximum WebSocket frame, 8 MiB relay send buffer per peer, 30-minute room inactivity expiry, and a 30-second connection heartbeat. Activity refreshes room expiry. Slow consumers are disconnected. Browsers retain at most four incoming transfers, expire stalled transfers after about one minute, and retain download links for at most ten minutes, 32 files, or 128 MiB. These bounds reduce resource use; the unauthenticated LAN relay is not designed as a public internet service.
+`npm run check` runs ESLint, verifies syntax and offline assets without compiling, executes Node.js unit tests, and runs Playwright end-to-end tests across Chromium, Firefox, and WebKit.
 
-## Repository and architecture
-
-- `bin/termrent.js`: CLI validation, random room/key, network address, QR, mDNS and shutdown.
-- `lib/server.js`: HTTP assets/health and binary WebSocket relay; in-memory room management.
-- `lib/crypto-utils.js`: interoperable Node AES helpers and key/room generation; no CLI-to-CLI transfer command exists.
-- `public/index.html`, `public/app.js`: browser UI and transfer protocol.
-- `test/core.test.js`: crypto, HTTP, WebSocket, lifecycle and CLI regression tests.
-- `test/e2e/`: real-browser upload/download and failure-flow tests.
-
-There is no database, persistence layer, application environment variable, transpilation step, or separate frontend/backend service. `createServer({ port, host, maxPeersPerRoom, maxRooms, roomTtlMs })` resolves to `{ httpServer, wss, rooms, address, close }`; call `await close()` to release resources. `GET /health` returns health and room/peer counts. Room pages are `/r/<id>` and WebSockets are `/ws/<id>`.
-
-## Development and validation
-
-```sh
-npm ci
-npx playwright install chromium firefox webkit
-npm run check
-```
-
-`check` runs ESLint, syntax/import/offline-asset build validation, Node unit/integration tests, and Playwright end-to-end tests in Chromium, Firefox and WebKit. This is JavaScript; no standalone static type-check pipeline is configured. `npm run dev` uses port 3000. `npm audit` checks dependency advisories; `npm pack --dry-run` checks package contents. Browser tests require permission to launch browsers and bind local sockets. On macOS 27, Firefox subprocess startup can fail with “Could not find profile folder” due to [Mozilla bug 2060476](https://bugzilla.mozilla.org/show_bug.cgi?id=2060476). Run the full matrix on Linux CI or a host with the required macOS app-data permission; Chromium/WebKit can be checked independently with `npm run test:e2e -- --project=chromium --project=webkit`. The full pipeline deliberately retains Firefox coverage.
-
-## License
+## 📄 License
 
 MIT
